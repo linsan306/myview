@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>廖彬斌的考研信息网站</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- 引入 Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+        integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+        crossorigin="" />
+    <!-- 引入 Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+        integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+        crossorigin=""></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        secondary: '#36D399',
+                        accent: '#7C3AED',
+                        neutral: '#F3F4F6',
+                        'neutral-dark': '#4B5563',
+                        'tier-985': '#EF4444',
+                        'tier-211': '#F59E0B',
+                        'tier-双一流': '#10B981',
+                        'tier-一本': '#6B7280',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+
+            .school-card {
+                @apply relative overflow-hidden rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-1;
+            }
+
+            .school-card::before {
+                content: "";
+                @apply absolute inset-0 opacity-10 bg-center bg-no-repeat bg-contain transition-opacity duration-300;
+            }
+
+            .school-card:hover::before {
+                @apply opacity-20;
+            }
+
+            .tier-badge {
+                @apply inline-block text-xs px-2 py-1 rounded-full font-medium mb-2;
+            }
+
+            .input-field {
+                @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50;
+            }
+
+            .btn-primary {
+                @apply bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors duration-300;
+            }
+
+            .btn-secondary {
+                @apply bg-secondary text-white px-4 py-2 rounded-lg hover:bg-secondary/90 transition-colors duration-300;
+            }
+
+            .recommendation-card {
+                @apply p-4 rounded-lg border-l-4 my-4;
+            }
+
+            .nav-link {
+                @apply text-gray-700 hover:text-primary transition-colors duration-200;
+            }
+
+            .nav-link.active {
+                @apply text-primary font-medium;
+            }
+
+            /* 地图容器样式 */
+            #map {
+                height: 400px;
+                margin-bottom: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 text-gray-800 font-sans">
+    <!-- 导航栏 -->
+    <nav class="sticky top-0 z-50 bg-white shadow-md transition-all duration-300">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <i class="fa fa-graduation-cap text-primary text-2xl"></i>
+                <h1 class="text-xl font-bold text-primary">考研助手</h1>
+            </div>
+            <div class="hidden md:flex space-x-6">
+                <a href="#home" class="nav-link active">首页</a>
+                <a href="#schools" class="nav-link">目标院校</a>
+                <a href="#scores" class="nav-link">成绩评估</a>
+            </div>
+            <button class="md:hidden text-gray-700 focus:outline-none" id="menu-toggle">
+                <i class="fa fa-bars text-xl"></i>
+            </button>
+        </div>
+        <!-- 移动端菜单 -->
+        <div class="md:hidden hidden bg-white border-t" id="mobile-menu">
+            <div class="container mx-auto px-4 py-2 flex flex-col space-y-3">
+                <a href="#home" class="nav-link py-2 border-b border-gray-100">首页</a>
+                <a href="#schools" class="nav-link py-2 border-b border-gray-100">目标院校</a>
+                <a href="#scores" class="nav-link py-2">成绩评估</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto px-4 py-8">
+        <!-- 头部区域 -->
+        <section id="home" class="mb-12">
+            <div class="bg-gradient-to-r from-primary/90 to-accent/90 text-white rounded-2xl shadow-lg p-8 md:p-12 relative overflow-hidden">
+                <div class="absolute inset-0 opacity-10">
+                    <i class="fa fa-book text-[200px] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transform rotate-12"></i>
+                </div>
+                <div class="relative z-10">
+                    <h1 class="text-[clamp(1.8rem,4vw,3rem)] font-bold mb-4">考研信息网站</h1>
+                    <p class="text-[clamp(1rem,2vw,1.25rem)] opacity-90 mb-6 max-w-2xl">
+                        学号：20225084011 | 姓名：廖彬斌
+                    </p>
+                    <div class="flex flex-wrap gap-4">
+                        <a href="#schools" class="bg-white text-primary px-6 py-3 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center">
+                            <i class="fa fa-university mr-2"></i> 查看目标院校
+                        </a>
+                        <a href="#scores" class="bg-transparent border-2 border-white text-white px-6 py-3 rounded-lg font-medium hover:bg-white/10 transition-all duration-300 flex items-center">
+                            <i class="fa fa-calculator mr-2"></i> 成绩评估
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 个人信息模块 -->
+        <section class="bg-white rounded-xl shadow-md p-6 mb-12">
+            <div class="flex flex-col md:flex-row items-start gap-6">
+                <div class="w-24 h-24 md:w-32 md:h-32 rounded-full bg-primary/10 flex items-center justify-center">
+                    <i class="fa fa-user text-primary text-4xl"></i>
+                </div>
+                <div>
+                    <h2 class="text-2xl font-bold mb-4 flex items-center">
+                        <i class="fa fa-info-circle text-primary mr-2"></i> 个人基本信息
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="flex items-start">
+                            <i class="fa fa-graduation-cap text-primary mt-1 mr-3"></i>
+                            <div>
+                                <h3 class="font-medium text-gray-500 text-sm">就读院校</h3>
+                                <p class="font-medium">信阳师范大学</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <i class="fa fa-book text-primary mt-1 mr-3"></i>
+                            <div>
+                                <h3 class="font-medium text-gray-500 text-sm">就读专业</h3>
+                                <p class="font-medium">地理信息科学</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <i class="fa fa-map-marker text-primary mt-1 mr-3"></i>
+                            <div>
+                                <h3 class="font-medium text-gray-500 text-sm">考研方向</h3>
+                                <p class="font-medium">地图学与地理信息系统</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 地图模块 -->
+        <section id="map-section" class="mb-12">
+            <h2 class="text-2xl font-bold mb-4 flex items-center">
+                <i class="fa fa-map text-primary mr-2"></i> 院校地图
+            </h2>
+            <div id="map"></div>
+        </section>
+
+        <!-- 院校信息模块 -->
+        <section id="schools" class="mb-12">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold flex items-center">
+                    <i class="fa fa-university text-primary mr-2"></i> 考研目标与院校信息
+                </h2>
+                <div class="flex gap-2">
+                    <button id="sort-tier" class="btn-primary text-sm flex items-center">
+                        <i class="fa fa-sort mr-1"></i> 按梯队排序
+                    </button>
+                    <button id="sort-score" class="btn-primary text-sm flex items-center">
+                        <i class="fa fa-sort-numeric-asc mr-1"></i> 按分数排序
+                    </button>
+                </div>
+            </div>
+            <p class="text-gray-600 mb-8">以下为我关注的考研院校及研究方向，按院校梯队排序，点击可跳转至院校官方研究生招生页面：</p>
+
+            <!-- 院校网格 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="schools-grid">
+                <!-- 985院校 -->
+                <a href="https://www.nju.edu.cn/" target="_blank" class="school-card bg-primary/90 text-white">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+                    <div class="absolute inset-0 bg-[url('https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/Nanjing_University_logo.svg/1200px-Nanjing_University_logo.svg.png')] opacity-10 bg-center bg-no-repeat bg-contain transition-opacity duration-300"></div>
+                    <div class="p-6 relative z-10">
+                        <span class="tier-badge bg-tier-985">985</span>
+                        <h3 class="text-xl font-bold mb-1">南京大学</h3>
+                        <p class="text-sm opacity-90 mb-3">地理学/遥感科学与技术</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs bg-white/20 px-2 py-1 rounded-full">往年分数线: 370+</span>
+                            <i class="fa fa-arrow-right"></i>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- 211院校 -->
+                <a href="https://www.cug.edu.cn/" target="_blank" class="school-card bg-[#0f766e] text-white">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+                    <div class="absolute inset-0 bg-[url('https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/China_University_of_Geosciences_%28Wuhan%29_logo.svg/1200px-China_University_of_Geosciences_%28Wuhan%29_logo.svg.png')] opacity-10 bg-center bg-no-repeat bg-contain transition-opacity duration-300"></div>
+                    <div class="p-6 relative z-10">
+                        <span class="tier-badge bg-tier-211">211</span>
+                        <h3 class="text-xl font-bold mb-1">中国地质大学（武汉）</h3>
+                        <p class="text-sm opacity-90 mb-3">测绘科学与技术/地图学与地理信息工程</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs bg-white/20 px-2 py-1 rounded-full">往年分数线: 340+</span>
+                            <i class="fa fa-arrow-right"></i>
+                        </div>
+                    </div>
+                </a>
+
+                <a href="https://www.fzu.edu.cn/" target="_blank" class="school-card bg-accent text-white">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+                    <div class="absolute inset-0 bg-[url('https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/Fuzhou_University_logo.svg/1200px-Fuzhou_University_logo.svg.png')] opacity-10 bg-center bg-no-repeat bg-contain transition-opacity duration-300"></div>
+                    <div class="p-6 relative z-10">
+                        <span class="tier-badge bg-tier-211">211</span>
+                        <h3 class="text-xl font-bold mb-1">福州大学</h3>
+                        <p class="text-sm opacity-90 mb-3">地理学/资源与环境</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs bg-white/20 px-2 py-1 rounded-full">往年分数线: 330+</span>
+                            <i class="fa fa-arrow-right"></i>
+                        </div>
+                    </div>
+                </a>
+
+                <a href="https://www.chd.edu.cn/" target="_blank" class="school-card bg-[#c2410c] text-white">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+                    <div class="absolute inset-0 bg-[url('https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Chang%27an_University_logo.svg/1200px-Chang%27an_University_logo.svg.png')] opacity-10 bg-center bg-no-repeat bg-contain transition-opacity duration-300"></div>
+                    <div class="p-6 relative z-10">
+                        <span class="tier-badge bg-tier-211">211</span>
+                        <h3 class="text-xl font-bold mb-1">长安大学</h3>
+                        <p class="text-sm opacity-90 mb-3">测绘工程/地质工程</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs bg-white/20 px-2 py-1 rounded-full">往年分数线: 335+</span>
+                            <i class="fa fa-arrow-right"></i>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- 双一流院校 -->
+                <a href="https://www.ucas.ac.cn/" target="_blank" class="school-card bg-[#0c4a6e] text-white">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+                    <div class="absolute inset-0 bg-[url('https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/University_of_Chinese_Academy_of_Sciences_logo.svg/1200px-University_of_Chinese_Academy_of_Sciences_logo.svg.png')] opacity-10 bg-center bg-no-repeat bg-contain transition-opacity duration-300"></div>
+                    <div class="p-6 relative z-10">
+                        <span class="tier-badge bg-tier-双一流">双一流</span>
+                        <h3 class="text-xl font-bold mb-1">中国科学院大学</h3>
+                        <p class="text-sm opacity-90 mb-3">地理学/地图学与地理信息系统</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs bg-white/20 px-2 py-1 rounded-full">往年分数线: 360+</span>
+                            <i class="fa fa-arrow-right"></i>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- 一本院校 -->
+                <a href="https://www.ccnu.edu.cn/" target="_blank" class="school-card bg-[#9f1239] text-white">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+                    <div class="absolute inset-0 bg-[url('https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Central_China_Normal_University_logo.svg/1200px-Central_China_Normal_University_logo.svg.png')] opacity-10 bg-center bg-no-repeat bg-contain transition-opacity duration-300"></div>
+                    <div class="p-6 relative z-10">
+                        <span class="tier-badge bg-tier-一本">一本</span>
+                        <h3 class="text-xl font-bold mb-1">华中师范大学</h3>
+                        <p class="text-sm opacity-90 mb-3">人文地理学/自然地理学</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs bg-white/20 px-2 py-1 rounded-full">往年分数线: 320+</span>
+                            <i class="fa fa-arrow-right"></i>
+                        </div>
+                    </div>
+                </a>
+
+                <a href="https://www.nbu.edu.cn/" target="_blank" class="school-card bg-[#0f766e] text-white">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+                    <div class="absolute inset-0 bg-[url('https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Ningbo_University_logo.svg/1200px-Ningbo_University_logo.svg.png')] opacity-10 bg-center bg-no-repeat bg-contain transition-opacity duration-300"></div>
+                    <div class="p-6 relative z-10">
+                        <span class="tier-badge bg-tier-一本">一本</span>
+                        <h3 class="text-xl font-bold mb-1">宁波大学</h3>
+                        <p class="text-sm opacity-90 mb-3">地理学/海洋资源与环境</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs bg-white/20 px-2 py-1 rounded-full">往年分数线: 310+</span>
+                            <i class="fa fa-arrow-right"></i>
+                        </div>
+                    </div>
+                </a>
+
+                <a href="https://www.shnu.edu.cn/" target="_blank" class="school-card bg-[#475569] text-white">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+                    <div class="absolute inset-0 bg-[url('https://upload.wikimedia.org/wikipedia/commons/thumb/4/40/Shanghai_Normal_University_logo.svg/1200px-Shanghai_Normal_University_logo.svg.png')] opacity-10 bg-center bg-no-repeat bg-contain transition-opacity duration-300"></div>
+                    <div class="p-6 relative z-10">
+                        <span class="tier-badge bg-tier-一本">一本</span>
+                        <h3 class="text-xl font-bold mb-1">上海师范大学</h3>
+                        <p class="text-sm opacity-90 mb-3">人文地理学/自然地理学</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs bg-white/20 px-2 py-1 rounded-full">往年分数线: 300+</span>
+                            <i class="fa fa-arrow-right"></i>
+                        </div>
+                    </div>
+                </a>
+
+                <a href="https://www.cnu.edu.cn/" target="_blank" class="school-card bg-accent text-white">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+                    <div class="absolute inset-0 bg-[url('https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/Capital_Normal_University_logo.svg/1200px-Capital_Normal_University_logo.svg.png')] opacity-10 bg-center bg-no-repeat bg-contain transition-opacity duration-300"></div>
+                    <div class="p-6 relative z-10">
+                        <span class="tier-badge bg-tier-一本">一本</span>
+                        <h3 class="text-xl font-bold mb-1">首都师范大学</h3>
+                        <p class="text-sm opacity-90 mb-3">地理学/课程与教学论</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs bg-white/20 px-2 py-1 rounded-full">往年分数线: 325+</span>
+                            <i class="fa fa-arrow-right"></i>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </section>
+
+        <!-- 成绩评估模块 -->
+        <section id="scores" class="bg-white rounded-xl shadow-md p-6 md:p-8 mb-12">
+            <h2 class="text-2xl font-bold mb-6 flex items-center">
+                <i class="fa fa-calculator text-primary mr-2"></i> 预计考研成绩评估
+            </h2>
+
+            <div class="mb-6">
+                <p class="mb-4">选择评估方式：</p>
+                <div class="flex flex-wrap gap-4">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="radio" name="calcMode" value="total" checked class="w-4 h-4 text-primary focus:ring-primary">
+                        <span class="ml-2">直接输入总分</span>
+                    </label>
+                    <label class="flex items-center cursor-pointer">
+                        <input type="radio" name="calcMode" value="details" class="w-4 h-4 text-primary focus:ring-primary">
+                        <span class="ml-2">输入各科成绩计算总分</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 总分输入 -->
+            <div id="totalScoreInput" class="mb-6">
+                <label for="totalScore" class="block text-sm font-medium text-gray-700 mb-2">总分 (满分500)：</label>
+                <input type="number" id="totalScore" min="0" max="500" placeholder="例如：380" class="input-field">
+            </div>
+
+            <!-- 各科成绩输入 -->
+            <div id="detailScoreInputs" style="display:none;">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <label for="politicalScore" class="block text-sm font-medium text-gray-700 mb-2">政治 (满分100)：</label>
+                        <input type="number" id="politicalScore" min="0" max="100" placeholder="例如：75" class="input-field">
+                    </div>
+
+                    <div>
+                        <label for="englishScore" class="block text-sm font-medium text-gray-700 mb-2">英语 (满分100)：</label>
+                        <input type="number" id="englishScore" min="0" max="100" placeholder="例如：70" class="input-field">
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <p class="mb-3 font-medium">考试类型：</p>
+                    <div class="flex flex-wrap gap-4">
+                        <label class="flex items-center cursor-pointer">
+                            <input type="radio" name="examType" value="math" checked class="w-4 h-4 text-primary focus:ring-primary">
+                            <span class="ml-2">考数学 (一门专业课+数学)</span>
+                        </label>
+                        <label class="flex items-center cursor-pointer">
+                            <input type="radio" name="examType" value="major" class="w-4 h-4 text-primary focus:ring-primary">
+                            <span class="ml-2">不考数学 (两门专业课)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div id="mathScoreInputs">
+                        <label for="mathType" class="block text-sm font-medium text-gray-700 mb-2">数学类型：</label>
+                        <select id="mathType" class="input-field">
+                            <option value="1">数学一 (满分150)</option>
+                            <option value="2">数学二 (满分150)</option>
+                            <option value="3">数学三 (满分150)</option>
+                        </select>
+
+                        <label for="mathScore" class="block text-sm font-medium text-gray-700 mt-4 mb-2">数学成绩：</label>
+                        <input type="number" id="mathScore" min="0" max="150" placeholder="例如：120" class="input-field">
+                    </div>
+
+                    <div>
+                        <label for="major1Score" class="block text-sm font-medium text-gray-700 mb-2">专业课成绩 (满分150)：</label>
+                        <input type="number" id="major1Score" min="0" max="150" placeholder="例如：125" class="input-field">
+                    </div>
+
+                    <div id="major2ScoreInput" style="display:none;">
+                        <label for="major2Score" class="block text-sm font-medium text-gray-700 mb-2">专业课2成绩 (满分150)：</label>
+                        <input type="number" id="major2Score" min="0" max="150" placeholder="例如：130" class="input-field">
+                    </div>
+                </div>
+
+                <div class="flex items-center">
+                    <button onclick="calculateTotalScore()" class="btn-secondary flex items-center">
+                        <i class="fa fa-calculator mr-2"></i> 计算总分
+                    </button>
+                    <span id="calculatedTotal" class="ml-4 text-gray-600"></span>
+                </div>
+            </div>
+
+            <button onclick="evaluateScores()" class="btn-primary mt-6 flex items-center">
+                <i class="fa fa-star mr-2"></i> 评估院校
+            </button>
+
+            <div id="recommendationResult" class="mt-8"></div>
+        </section>
+    </main>
+
+    <footer class="bg-gray-800 text-white py-10">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div>
+                    <h3 class="text-lg font-bold mb-4 flex items-center">
+                        <i class="fa fa-graduation-cap mr-2"></i> 考研助手
+                    </h3>
+                    <p class="text-gray-400">
+                        为考研学子提供院校信息查询和成绩评估服务，助力考研成功。
+                    </p>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold mb-4">快速链接</h3>
+                    <ul class="space-y-2">
+                        <li><a href="#home" class="text-gray-400 hover:text-white transition-colors duration-200">首页</a></li>
+                        <li><a href="#schools" class="text-gray-400 hover:text-white transition-colors duration-200">目标院校</a></li>
+                        <li><a href="#scores" class="text-gray-400 hover:text-white transition-colors duration-200">成绩评估</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold mb-4">联系我们</h3>
+                    <ul class="space-y-2">
+                        <li class="flex items-center">
+                            <i class="fa fa-envelope-o mr-2 text-gray-400"></i>
+                            <a href="mailto:1669018796@qq.com" class="text-gray-400 hover:text-white transition-colors duration-200">1669018796@qq.com</a>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fa fa-phone mr-2 text-gray-400"></i>
+                            <span class="text-gray-400">15717976357</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-500">
+                <p>© 2025 考研助手. 保留所有权利.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // 移动端菜单切换
+        document.getElementById('menu-toggle').addEventListener('click', function () {
+            const mobileMenu = document.getElementById('mobile-menu');
+            mobileMenu.classList.toggle('hidden');
+        });
+
+        // 导航栏滚动效果
+        window.addEventListener('scroll', function () {
+            const nav = document.querySelector('nav');
+            if (window.scrollY > 10) {
+                nav.classList.add('py-2');
+                nav.classList.remove('py-3');
+            } else {
+                nav.classList.add('py-3');
+                nav.classList.remove('py-2');
+            }
+        });
+
+        // 平滑滚动
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+
+                const targetId = this.getAttribute('href');
+                const targetElement = document.querySelector(targetId);
+
+                if (targetElement) {
+                    window.scrollTo({
+                        top: targetElement.offsetTop - 80,
+                        behavior: 'smooth'
+                    });
+
+                    // 关闭移动端菜单
+                    document.getElementById('mobile-menu').classList.add('hidden');
+
+                    // 更新导航栏活动状态
+                    document.querySelectorAll('.nav-link').forEach(link => {
+                        link.classList.remove('active');
+                    });
+                    this.classList.add('active');
+                }
+            });
+        });
+
+        // 切换输入模式
+        document.querySelectorAll('input[name="calcMode"]').forEach(radio => {
+            radio.addEventListener('change', function () {
+                document.getElementById('totalScoreInput').style.display = this.value === 'total' ? 'block' : 'none';
+                document.getElementById('detailScoreInputs').style.display = this.value === 'details' ? 'block' : 'none';
+            });
+        });
+
+        // 切换考试类型
+        document.querySelectorAll('input[name="examType"]').forEach(radio => {
+            radio.addEventListener('change', function () {
+                if (this.value === 'math') {
+                    // 考数学，显示数学成绩输入，隐藏第二门专业课
+                    document.getElementById('mathScoreInputs').style.display = 'block';
+                    document.getElementById('major2ScoreInput').style.display = 'none';
+
+                    // 修改第一门专业课的标签文字
+                    document.querySelector('label[for="major1Score"]').textContent = '专业课成绩 (满分150)：';
+                } else {
+                    // 不考数学，隐藏数学成绩输入，显示第二门专业课
+                    document.getElementById('mathScoreInputs').style.display = 'none';
+                    document.getElementById('major2ScoreInput').style.display = 'block';
+
+                    // 修改第一门专业课的标签文字
+                    document.querySelector('label[for="major1Score"]').textContent = '专业课1成绩 (满分150)：';
+                }
+            });
+        });
+
+        // 计算总分
+        function calculateTotalScore() {
+            const political = parseInt(document.getElementById('politicalScore').value) || 0;
+            const english = parseInt(document.getElementById('englishScore').value) || 0;
+
+            let total = political + english;
+
+            const examType = document.querySelector('input[name="examType"]:checked').value;
+
+            if (examType === 'math') {
+                // 考数学，总分=政治+英语+数学+一门专业课
+                const math = parseInt(document.getElementById('mathScore').value) || 0;
+                const major1 = parseInt(document.getElementById('major1Score').value) || 0;
+                total += math + major1;
+            } else {
+                // 不考数学，总分=政治+英语+两门专业课
+                const major1 = parseInt(document.getElementById('major1Score').value) || 0;
+                const major2 = parseInt(document.getElementById('major2Score').value) || 0;
+                total += major1 + major2;
+            }
+
+            document.getElementById('calculatedTotal').textContent = `计算总分: ${total}`;
+            document.getElementById('totalScore').value = total;
+
+            // 添加动画效果
+            const totalElement = document.getElementById('calculatedTotal');
+            totalElement.classList.add('text-primary', 'font-bold');
+            setTimeout(() => {
+                totalElement.classList.remove('text-primary', 'font-bold');
+            }, 1000);
+        }
+
+        // 院校数据 - 包含往年录取分数线信息
+        const schools = [
+            {
+                name: "南京大学",
+                tier: "985",
+                minTotal: 370,
+                minPolitical: 60,
+                minEnglish: 60,
+                minMath: 80,
+                minMajor1: 90,
+                minMajor2: 90,
+                url: "https://www.nju.edu.cn/",
+                color: "#1a56db",
+                lat: 32.04154,
+                lng: 118.78643
+            },
+            {
+                name: "中国地质大学（武汉）",
+                tier: "211",
+                minTotal: 340,
+                minPolitical: 55,
+                minEnglish: 55,
+                minMath: 75,
+                minMajor1: 85,
+                minMajor2: 85,
+                url: "https://www.cug.edu.cn/",
+                color: "#0f766e",
+                lat: 30.5225,
+                lng: 114.3642
+            },
+            {
+                name: "福州大学",
+                tier: "211",
+                minTotal: 330,
+                minPolitical: 55,
+                minEnglish: 55,
+                minMath: 70,
+                minMajor1: 80,
+                minMajor2: 80,
+                url: "https://www.fzu.edu.cn/",
+                color: "#7e22ce",
+                lat: 26.0708,
+                lng: 119.2246
+            },
+            {
+                name: "长安大学",
+                tier: "211",
+                minTotal: 335,
+                minPolitical: 55,
+                minEnglish: 55,
+                minMath: 70,
+                minMajor1: 80,
+                minMajor2: 80,
+                url: "https://www.chd.edu.cn/",
+                color: "#c2410c",
+                lat: 34.2337,
+                lng: 108.9124
+            },
+            {
+                name: "中国科学院大学",
+                tier: "双一流",
+                minTotal: 360,
+                minPolitical: 55,
+                minEnglish: 55,
+                minMath: 80,
+                minMajor1: 85,
+                minMajor2: 85,
+                url: "https://www.ucas.ac.cn/",
+                color: "#0c4a6e",
+                lat: 39.9571,
+                lng: 116.3099
+            },
+            {
+                name: "华中师范大学",
+                tier: "一本",
+                minTotal: 320,
+                minPolitical: 50,
+                minEnglish: 50,
+                minMath: 70,
+                minMajor1: 80,
+                minMajor2: 80,
+                url: "https://www.ccnu.edu.cn/",
+                color: "#9f1239",
+                lat: 30.5143,
+                lng: 114.3694
+            },
+            {
+                name: "宁波大学",
+                tier: "一本",
+                minTotal: 310,
+                minPolitical: 50,
+                minEnglish: 50,
+                minMath: 65,
+                minMajor1: 75,
+                minMajor2: 75,
+                url: "https://www.nbu.edu.cn/",
+                color: "#0f766e",
+                lat: 29.8787,
+                lng: 121.5753
+            },
+            {
+                name: "上海师范大学",
+                tier: "一本",
+                minTotal: 300,
+                minPolitical: 50,
+                minEnglish: 50,
+                minMath: 65,
+                minMajor1: 75,
+                minMajor2: 75,
+                url: "https://www.shnu.edu.cn/",
+                color: "#475569",
+                lat: 31.0292,
+                lng: 121.4349
+            },
+            {
+                name: "首都师范大学",
+                tier: "一本",
+                minTotal: 325,
+                minPolitical: 50,
+                minEnglish: 50,
+                minMath: 70,
+                minMajor1: 80,
+                minMajor2: 80,
+                url: "https://www.cnu.edu.cn/",
+                color: "#7e22ce",
+                lat: 39.9037,
+                lng: 116.2002
+            }
+        ];
+
+        // 评估成绩并推荐院校
+        function evaluateScores() {
+            const total = parseInt(document.getElementById('totalScore').value) || 0;
+
+            // 验证输入
+            if (total === 0) {
+                document.getElementById('recommendationResult').innerHTML = `
+                    <div class="recommendation-card border-red-500 bg-red-50 text-red-800">
+                        <div class="flex items-start">
+                            <i class="fa fa-exclamation-circle text-red-500 mt-1 mr-3"></i>
+                            <div>
+                                <h4 class="font-medium">请输入有效的总分</h4>
+                                <p class="text-sm mt-1">请确保您已输入正确的总分或各科成绩。</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            // 获取当前选择的计算模式
+            const calcMode = document.querySelector('input[name="calcMode"]:checked').value;
+
+            // 根据成绩筛选院校
+            let recommendedSchools;
+
+            if (calcMode === 'total') {
+                // 仅根据总分筛选
+                recommendedSchools = schools.filter(school => total >= school.minTotal);
+            } else {
+                // 根据各科成绩筛选
+                const political = parseInt(document.getElementById('politicalScore').value) || 0;
+                // 这里需要补充各科成绩筛选的逻辑
+            }
+
+            // 显示推荐院校
+            let resultHTML = '';
+            if (recommendedSchools.length > 0) {
+                resultHTML = `
+                    <div class="recommendation-card border-green-500 bg-green-50 text-green-800">
+                        <div class="flex items-start">
+                            <i class="fa fa-check-circle text-green-500 mt-1 mr-3"></i>
+                            <div>
+                                <h4 class="font-medium">以下院校可能适合您：</h4>
+                                <ul class="list-disc list-inside text-sm mt-1">
+                                    ${recommendedSchools.map(school => `<li><a href="${school.url}" target="_blank">${school.name}</a></li>`).join('')}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                resultHTML = `
+                    <div class="recommendation-card border-yellow-500 bg-yellow-50 text-yellow-800">
+                        <div class="flex items-start">
+                            <i class="fa fa-info-circle text-yellow-500 mt-1 mr-3"></i>
+                            <div>
+                                <h4 class="font-medium">根据您的成绩，暂时没有合适的院校推荐。</h4>
+                                <p class="text-sm mt-1">您可以尝试提高成绩或选择其他院校。</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            document.getElementById('recommendationResult').innerHTML = resultHTML;
+        }
+
+        // 初始化地图
+        const map = L.map('map').setView([34.0522, 118.2437], 4);
+
+        // 添加地图图层
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
+            maxZoom: 18
+        }).addTo(map);
+
+        // 添加院校标记
+        schools.forEach(school => {
+            const marker = L.marker([school.lat, school.lng]).addTo(map);
+            marker.bindPopup(`<b>${school.name}</b><br><a href="${school.url}" target="_blank">查看详情</a>`);
+        });
+
+        // 点击地图显示经纬度
+        map.on('click', function (e) {
+            alert(`您点击的位置：纬度 ${e.latlng.lat.toFixed(4)}，经度 ${e.latlng.lng.toFixed(4)}`);
+        });
+    </script>
+</body>
+
+</html>
+    
